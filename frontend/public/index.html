@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>Test Auth0</title>
+
+  <script src="https://cdn.auth0.com/js/lock/10.6/lock.min.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+</head>
+<body>
+
+<button type="submit" id="btn-login">Sign In</button>
+<button type="submit" id="btn-logout" style="display:none;">Sign Out</button>
+
+<img alt="avatar" id="avatar" style="display:none;max-width:100px;">
+<p>Welcome <span id="nickname"></span></p>
+
+<button id="btn-ping-api">Ping API</button>
+
+<p>API response:</p>
+
+<pre id="api-response"></pre>
+
+<script>
+  var lock = new Auth0Lock('CLIENT_ID', 'AUTH0_DOMAIN');
+
+  var btn_login = document.getElementById('btn-login');
+  var btn_logout = document.getElementById('btn-logout');
+  var btn_ping_api = document.getElementById('btn-ping-api');
+  var api_response_block = document.getElementById('api-response');
+
+  btn_login.addEventListener('click', function () {
+    lock.show();
+  });
+
+  btn_logout.addEventListener('click', function () {
+    logout();
+  });
+
+  lock.on("authenticated", function (authResult) {
+    lock.getProfile(authResult.idToken, function (error, profile) {
+      if (error) {
+        // Handle error
+        return;
+      }
+      localStorage.setItem('id_token', authResult.idToken);
+      // Display user information
+      show_profile_info(profile);
+    });
+  });
+
+  var retrieve_profile = function () {
+    var id_token = localStorage.getItem('id_token');
+    if (id_token) {
+      lock.getProfile(id_token, function (err, profile) {
+        if (err) {
+          return alert('There was an error getting the profile: ' + err.message);
+        }
+        // Display user information
+        show_profile_info(profile);
+      });
+    }
+  };
+
+  var show_profile_info = function (profile) {
+    var avatar = document.getElementById('avatar');
+    document.getElementById('nickname').textContent = profile.nickname;
+    btn_login.style.display = "none";
+    avatar.src = profile.picture;
+    avatar.style.display = "block";
+    btn_logout.style.display = "block";
+  };
+
+  // ...
+  retrieve_profile();
+
+
+  var logout = function () {
+    localStorage.removeItem('id_token');
+    window.location.reload();
+  };
+
+  btn_ping_api.addEventListener('click', function () {
+    api_response_block.textContent = 'Loading...';
+
+    var id_token = localStorage.getItem('id_token');
+    fetch('http://localhost:5000/secured/ping', {headers: {'Authorization': 'Bearer ' + id_token}})
+        .then(function (resp) {
+          return resp.text();
+        })
+        .then(function (textResponse) {
+          api_response_block.textContent = textResponse;
+        });
+  });
+</script>
+
+</body>
+</html>
